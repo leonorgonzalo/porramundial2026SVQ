@@ -6,3 +6,6 @@ main = "worker.js"
 [assets]
 directory = "."
 binding = "ASSETS"
+
+[vars]
+SUPABASE_URL = "https://kfrvtkanhooxsysduowb.supabase.co"
