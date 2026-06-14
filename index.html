@@ -282,20 +282,26 @@ function calcPts(uid){
   if(!p) return 0;
   syncFases(uid);
   let pts=0;
+  // Fase de grupos — siempre
   PARTIDOS.forEach((_,i)=>{
     if(p.quiniela?.['m'+i]&&r.quiniela?.['m'+i]&&p.quiniela['m'+i]===r.quiniela['m'+i]) pts+=2;
   });
+  // Marcadores España — siempre
   ['esp_cv','esp_as','esp_ur'].forEach(k=>{
     if(p.spain?.[k]&&r.spain?.[k]&&p.spain[k]===r.spain[k]) pts+=10;
   });
-  [{k:'f3',v:5},{k:'f4',v:10},{k:'f5',v:15},{k:'f6',v:20},{k:'f7',v:30}].forEach(({k,v})=>{
-    (p[k]||[]).forEach(eq=>{if(eq&&(r[k]||[]).includes(eq))pts+=v;});
-  });
-  if(p.f8&&r.f8&&p.f8===r.f8) pts+=45;
-  if(p.pich_esp&&r.pich_esp&&p.pich_esp.trim().toLowerCase()===r.pich_esp.trim().toLowerCase()) pts+=15;
-  if(p.pich_mun&&r.pich_mun){
-    const opts=(p.pich_mun||'').split(',').map(x=>x.trim().toLowerCase());
-    if(opts.includes(r.pich_mun.trim().toLowerCase())) pts+=15;
+  // Cuadro + pichichi — solo si fase de grupos completa en resultados reales (o porra abierta)
+  const gruposCompletos=Object.keys(r.quiniela||{}).length>=72;
+  if(!isLocked()||gruposCompletos){
+    [{k:'f3',v:5},{k:'f4',v:10},{k:'f5',v:15},{k:'f6',v:20},{k:'f7',v:30}].forEach(({k,v})=>{
+      (p[k]||[]).forEach(eq=>{if(eq&&(r[k]||[]).includes(eq))pts+=v;});
+    });
+    if(p.f8&&r.f8&&p.f8===r.f8) pts+=45;
+    if(p.pich_esp&&r.pich_esp&&p.pich_esp.trim().toLowerCase()===r.pich_esp.trim().toLowerCase()) pts+=15;
+    if(p.pich_mun&&r.pich_mun){
+      const opts=(p.pich_mun||'').split(',').map(x=>x.trim().toLowerCase());
+      if(opts.includes(r.pich_mun.trim().toLowerCase())) pts+=15;
+    }
   }
   return pts;
 }
