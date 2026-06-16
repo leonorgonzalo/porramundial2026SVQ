@@ -120,6 +120,8 @@ input.correct,select.correct{border-color:#16a34a;color:#4ade80;background:rgba(
 .rank-num.gold{color:var(--gold)}.rank-num.silver{color:var(--silver)}.rank-num.bronze{color:var(--bronze)}
 .rank-name{flex:1;font-weight:500}
 .rank-pts{font-size:20px;font-weight:700;color:var(--accent);font-family:'Bebas Neue',sans-serif}
+.pos-change{font-size:11px;font-weight:700;width:28px;text-align:center;flex-shrink:0}
+.pos-change.up{color:#4ade80}.pos-change.down{color:#f87171}.pos-change.same{color:var(--text3)}
 .progress-bar{height:3px;background:var(--border);border-radius:2px;margin-top:3px}
 .progress-fill{height:100%;background:var(--accent);border-radius:2px}
 .top3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px}
@@ -221,7 +223,7 @@ const ADMIN_PASS='mundial2026';
 const LS='porra2026v4';
 const TODOS=Object.values(GRUPOS).flat().sort();
 
-let S={page:'home',user:null,qt:'fase1',rt:0,participants:{},results:{},payments:{},bonus:{},meta:{cuota:15,locked:false}};
+let S={page:'home',user:null,qt:'fase1',rt:0,participants:{},results:{},payments:{},bonus:{},snapshot:[],meta:{cuota:15,locked:false}};
 // Modo solo-lectura (admin viendo la quiniela de un participante) y participante visualizado
 let RO=false,viewUid=null;
 // ¿Quinielas bloqueadas por el administrador? (los participantes ya no pueden modificar)
@@ -237,6 +239,7 @@ async function ld(){
       S.results=d.results||{};
       S.payments=d.payments||{};
       S.bonus=d.bonus||{};
+      S.snapshot=d.snapshot||[];
       S.meta=d.meta||{cuota:15,locked:false};
     }
   }catch(e){console.error('Error loading data:',e);}
@@ -856,13 +859,26 @@ function renderRank(){
   }
   if(!rank.length){h+='<div class="card" style="text-align:center;padding:28px"><p style="color:var(--text2)">Sin participantes aún.</p></div>';app.innerHTML=h;return;}
   h+='<div>';
+  // Construir mapa de posición anterior desde snapshot
+  const prevPos={};
+  if(S.snapshot&&S.snapshot.length){
+    S.snapshot.forEach((e,i)=>{prevPos[e.uid]=i+1;});
+  }
   rank.forEach((p,i)=>{
     const cls=i===0?'gold':i===1?'silver':i===2?'bronze':'';
     const isLast=i===lastIdx&&rank.length>1;
     const prizeTag=i===0&&pot>0?` <span class="tag tag-amber">${prize1}€</span>`:i===1&&pot>0?` <span class="tag" style="background:rgba(148,163,184,.15);color:var(--silver)">${prize2}€</span>`:i===2&&pot>0?` <span class="tag" style="background:rgba(205,124,58,.15);color:var(--bronze)">${prize3}€</span>`:isLast&&pot>0?` <span class="tag" style="background:rgba(239,68,68,.1);color:#fca5a5">-${cuota}€</span>`:'';
+    let arrow='';
+    if(prevPos[p.uid]!==undefined){
+      const diff=prevPos[p.uid]-(i+1);
+      if(diff>0) arrow=`<span class="pos-change up">▲${diff}</span>`;
+      else if(diff<0) arrow=`<span class="pos-change down">▼${Math.abs(diff)}</span>`;
+      else arrow=`<span class="pos-change same">—</span>`;
+    }
     h+=`<div class="rank-row"><span class="rank-num ${cls}">${isLast?'💀':i+1}</span>
     <div style="flex:1"><span class="rank-name">${p.nombre}${prizeTag}</span>
     <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(p.pts/mx*100)}%"></div></div></div>
+    ${arrow}
     <span class="rank-pts">${p.pts}</span></div>`;
   });
   h+='</div>';app.innerHTML=h;
@@ -1083,7 +1099,23 @@ function renderRtab(i){
 }
 function setRSp(k,v){if(!S.results.spain)S.results.spain={};S.results.spain[k]=v;}
 function setRPi(k,v){S.results[k]=v;}
-async function saveR(){syncAdminFases();const m=document.getElementById('rsm');if(m)m.innerHTML='<p class="msg-ok" style="margin-top:8px;opacity:.6">Guardando...</p>';try{const res=await fetch('/api/results',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:S.results})});if(m)m.innerHTML=res.ok?'<p class="msg-ok" style="margin-top:8px">✓ Resultados guardados</p>':'<p class="msg-err" style="margin-top:8px">Error al guardar</p>';}catch(e){if(m)m.innerHTML='<p class="msg-err" style="margin-top:8px">Error de conexión</p>';}}
+async function saveR(){
+  syncAdminFases();
+  const m=document.getElementById('rsm');
+  if(m) m.innerHTML='<p class="msg-ok" style="margin-top:8px;opacity:.6">Guardando...</p>';
+  try{
+    const res=await fetch('/api/results',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:S.results})});
+    if(res.ok){
+      // Guardar snapshot del ranking actual
+      const snap=getRank().map(p=>({uid:p.uid,nombre:p.nombre,pts:p.pts}));
+      S.snapshot=snap;
+      await fetch('/api/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({snapshot:snap})});
+      if(m) m.innerHTML='<p class="msg-ok" style="margin-top:8px">✓ Resultados guardados</p>';
+    } else {
+      if(m) m.innerHTML='<p class="msg-err" style="margin-top:8px">Error al guardar</p>';
+    }
+  }catch(e){if(m) m.innerHTML='<p class="msg-err" style="margin-top:8px">Error de conexión</p>';}
+}
 
 async function init(){
   app.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--text2)">Cargando...</div>';

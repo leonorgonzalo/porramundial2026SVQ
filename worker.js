@@ -13,12 +13,13 @@ function json(data, status = 200) {
 
 async function handleData(env) {
   const supabase = getSupabase(env)
-  const [{ data: parts }, { data: res }, { data: pays }, { data: metas }, { data: bonuses }] = await Promise.all([
+  const [{ data: parts }, { data: res }, { data: pays }, { data: metas }, { data: bonuses }, { data: snap }] = await Promise.all([
     supabase.from('participants').select('*'),
     supabase.from('results').select('*').eq('id', 'main').single(),
     supabase.from('payments').select('*'),
     supabase.from('meta').select('*').eq('id', 'main').single(),
     supabase.from('bonus').select('*'),
+    supabase.from('snapshots').select('*').eq('id', 'main').single(),
   ])
 
   const participantsMap = {}
@@ -41,8 +42,20 @@ async function handleData(env) {
     results: res?.data || {},
     payments: paymentsMap,
     bonus: bonusMap,
+    snapshot: snap?.data || [],
     meta: { cuota: parseInt(metas?.cuota || '15'), locked: metas?.locked || false },
   })
+}
+
+async function handleSnapshot(request, env) {
+  const supabase = getSupabase(env)
+  const { snapshot } = await request.json()
+  const { error } = await supabase.from('snapshots').upsert(
+    { id: 'main', data: snapshot || [], updated_at: new Date().toISOString() },
+    { onConflict: 'id' }
+  )
+  if (error) return json({ error: error.message }, 500)
+  return json({ ok: true })
 }
 
 async function handleBonus(request, env) {
@@ -137,6 +150,7 @@ export default {
     if (path === '/api/lock' && request.method === 'POST') return handleMeta(request, env)
     if (path === '/api/meta' && request.method === 'POST') return handleMeta(request, env)
     if (path === '/api/bonus' && request.method === 'POST') return handleBonus(request, env)
+    if (path === '/api/snapshot' && request.method === 'POST') return handleSnapshot(request, env)
 
     // Serve static assets (index.html etc)
     return env.ASSETS.fetch(request)
