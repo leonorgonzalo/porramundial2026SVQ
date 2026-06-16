@@ -49,6 +49,7 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bot
 .radio-btn:hover{border-color:var(--accent);color:var(--accent)}
 .radio-btn.sel{background:var(--accent);border-color:var(--accent);color:#fff}
 .radio-btn.correct{background:#16a34a;border-color:#16a34a;color:#fff}
+.radio-btn.wrong{background:#7f1d1d;border-color:#ef4444;color:#fca5a5}
 
 /* GROUP HEADER */
 .group-block{margin-bottom:20px}
@@ -220,7 +221,7 @@ const ADMIN_PASS='mundial2026';
 const LS='porra2026v4';
 const TODOS=Object.values(GRUPOS).flat().sort();
 
-let S={page:'home',user:null,qt:'fase1',rt:0,participants:{},results:{},payments:{},meta:{cuota:15,locked:false}};
+let S={page:'home',user:null,qt:'fase1',rt:0,participants:{},results:{},payments:{},bonus:{},meta:{cuota:15,locked:false}};
 // Modo solo-lectura (admin viendo la quiniela de un participante) y participante visualizado
 let RO=false,viewUid=null;
 // ¿Quinielas bloqueadas por el administrador? (los participantes ya no pueden modificar)
@@ -235,6 +236,7 @@ async function ld(){
       S.participants=d.participants||{};
       S.results=d.results||{};
       S.payments=d.payments||{};
+      S.bonus=d.bonus||{};
       S.meta=d.meta||{cuota:15,locked:false};
     }
   }catch(e){console.error('Error loading data:',e);}
@@ -303,6 +305,8 @@ function calcPts(uid){
       if(opts.includes(r.pich_mun.trim().toLowerCase())) pts+=15;
     }
   }
+  // Bonus manual del admin
+  pts+=parseInt(S.bonus?.[uid]||0);
   return pts;
 }
 function getRank(){
@@ -444,10 +448,17 @@ function buildFaseGrupos(uid,isAdmin){
       const key='m'+idx;
       const v=p?.quiniela?.[key]||'';
       const rv=S.results?.quiniela?.[key]||'';
-      const correct=showGreen&&!!v&&v===rv;
+      const hasResult=!!rv;
+      const correct=showGreen&&!!v&&hasResult&&v===rv;
+      const wrong=showGreen&&!!v&&hasResult&&v!==rv;
       const fn=isAdmin?`setAdminQ(${idx},`:`setQ(${idx},`;
       const click=val=>ro?'':`${fn}'${val}')`;
-      const cls=val=>'radio-btn'+(v===val?' sel'+(correct?' correct':''):'');
+      const cls=val=>{
+        if(v!==val) return 'radio-btn';
+        if(correct) return 'radio-btn sel correct';
+        if(wrong) return 'radio-btn sel wrong';
+        return 'radio-btn sel';
+      };
       h+=`<div class="match-row">
         <span class="match-name">${loc} — ${vis}</span>
         <div class="radio-group">
@@ -882,13 +893,15 @@ function renderAdmin(){
   <h2>Participantes (${rank.length})</h2><div style="margin-top:8px">`;
   rank.forEach((p,i)=>{
     const pagado=S.payments[p.uid]?true:false;
+    const bonus=parseInt(S.bonus?.[p.uid]||0);
     h+=`<div class="rank-row"><span class="rank-num">${i+1}</span>
     <div style="flex:1"><span style="font-weight:500">${p.nombre}</span><br>
     <span style="font-size:12px;color:var(--text3)">${p.uid}</span></div>
     <span class="tag ${pagado?'tag-green':'tag-amber'}" style="margin-right:8px">${pagado?'✓ Pagado':'⏳ Pendiente'}</span>
     <span class="rank-pts" style="font-size:17px">${p.pts}</span>
     <button class="btn btn-sm" onclick="verQuiniela('${p.uid}')" title="Ver quiniela" style="margin-left:8px">👁</button>
-    <button class="btn btn-sm btn-danger" onclick="borrar('${p.uid}')" style="margin-left:6px">🗑</button></div>`;
+    <button class="btn btn-sm" onclick="editBonus('${p.uid}',${bonus})" title="Bonus manual" style="margin-left:4px;${bonus!==0?'border-color:var(--gold);color:var(--gold)':''}">±${bonus}</button>
+    <button class="btn btn-sm btn-danger" onclick="borrar('${p.uid}')" style="margin-left:4px">🗑</button></div>`;
   });
   h+='</div>';app.innerHTML=h;
 }
@@ -903,6 +916,22 @@ async function toggleLock(){
   S.meta.locked=next;
   try{await fetch('/api/lock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locked:next})});}catch(e){console.error('Error saving lock:',e);}
   renderAdmin();
+}
+
+// ── BONUS MANUAL ──
+function editBonus(uid,current){
+  const val=prompt(`Puntos extra/penalización para ${S.participants[uid]?.nombre}\n(puede ser negativo, 0 para quitar):`,current);
+  if(val===null) return;
+  const n=parseInt(val);
+  if(isNaN(n)){alert('Introduce un número.');return;}
+  if(!S.bonus) S.bonus={};
+  S.bonus[uid]=n;
+  setBonus(uid,n);
+  renderAdmin();
+}
+async function setBonus(uid,pts){
+  try{await fetch('/api/bonus',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:uid,pts})});}
+  catch(e){console.error('Error saving bonus:',e);}
 }
 
 // ── ADMIN: VER QUINIELA DE UN PARTICIPANTE (solo lectura) ──
