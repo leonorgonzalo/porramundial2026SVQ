@@ -896,6 +896,7 @@ function renderAdmin(){
     <button class="btn btn-primary" onclick="go('admin_results')">📝 Quiniela · Resultados reales</button>
     <button class="btn" onclick="go('ranking')">🏆 Ranking</button>
     <button class="btn" onclick="go('admin_pagos')">💰 Pagos</button>
+    <button class="btn" onclick="fijarSnapshot()" title="Fija el ranking actual como referencia para las flechas ▲▼">📸 Fijar posiciones</button>
   </div>
   <div class="card" style="margin-bottom:18px;${isLocked()?'background:rgba(99,102,241,.07);border-color:rgba(99,102,241,.3)':''}">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -1104,18 +1105,18 @@ async function saveR(){
   const m=document.getElementById('rsm');
   if(m) m.innerHTML='<p class="msg-ok" style="margin-top:8px;opacity:.6">Guardando...</p>';
   try{
-    // Guardar snapshot del ranking ANTES de aplicar nuevos resultados
-    const snap=getRank().map(p=>({uid:p.uid,nombre:p.nombre,pts:p.pts}));
-    await fetch('/api/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({snapshot:snap})});
-    // Ahora guardar los resultados nuevos
     const res=await fetch('/api/results',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:S.results})});
-    if(res.ok){
-      S.snapshot=snap;
-      if(m) m.innerHTML='<p class="msg-ok" style="margin-top:8px">✓ Resultados guardados</p>';
-    } else {
-      if(m) m.innerHTML='<p class="msg-err" style="margin-top:8px">Error al guardar</p>';
-    }
+    if(m) m.innerHTML=res.ok?'<p class="msg-ok" style="margin-top:8px">✓ Resultados guardados</p>':'<p class="msg-err" style="margin-top:8px">Error al guardar</p>';
   }catch(e){if(m) m.innerHTML='<p class="msg-err" style="margin-top:8px">Error de conexión</p>';}
+}
+async function fijarSnapshot(){
+  if(!confirm('¿Fijar el ranking actual como referencia para las flechas?')) return;
+  const snap=getRank().map(p=>({uid:p.uid,nombre:p.nombre,pts:p.pts}));
+  try{
+    const res=await fetch('/api/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({snapshot:snap})});
+    if(res.ok){S.snapshot=snap;alert('✓ Ranking fijado como referencia.');}
+    else alert('Error al guardar snapshot.');
+  }catch(e){alert('Error de conexión.');}
 }
 
 async function init(){
