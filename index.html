@@ -1104,12 +1104,13 @@ async function saveR(){
   const m=document.getElementById('rsm');
   if(m) m.innerHTML='<p class="msg-ok" style="margin-top:8px;opacity:.6">Guardando...</p>';
   try{
+    // Guardar snapshot del ranking ANTES de aplicar nuevos resultados
+    const snap=getRank().map(p=>({uid:p.uid,nombre:p.nombre,pts:p.pts}));
+    await fetch('/api/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({snapshot:snap})});
+    // Ahora guardar los resultados nuevos
     const res=await fetch('/api/results',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:S.results})});
     if(res.ok){
-      // Guardar snapshot del ranking actual
-      const snap=getRank().map(p=>({uid:p.uid,nombre:p.nombre,pts:p.pts}));
       S.snapshot=snap;
-      await fetch('/api/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({snapshot:snap})});
       if(m) m.innerHTML='<p class="msg-ok" style="margin-top:8px">✓ Resultados guardados</p>';
     } else {
       if(m) m.innerHTML='<p class="msg-err" style="margin-top:8px">Error al guardar</p>';
