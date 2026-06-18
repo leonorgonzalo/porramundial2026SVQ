@@ -464,7 +464,8 @@ function buildFaseGrupos(uid,isAdmin){
       };
       h+=`<div class="match-row">
         <span class="match-name">${loc} — ${vis}</span>
-        <div class="radio-group">
+        <div class="radio-group" style="align-items:center;gap:4px">
+          ${wrong?`<span style="font-size:11px;font-weight:700;color:#86efac;background:rgba(134,239,172,.12);border:1px solid rgba(134,239,172,.3);border-radius:5px;padding:2px 7px">${rv}</span>`:''}
           <button class="${cls('1')}" onclick="${click('1')}"  data-mi="${idx}" data-v="1">1</button>
           <button class="${cls('X')}" onclick="${click('X')}"  data-mi="${idx}" data-v="X">X</button>
           <button class="${cls('2')}" onclick="${click('2')}"  data-mi="${idx}" data-v="2">2</button>
