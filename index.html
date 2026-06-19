@@ -43,6 +43,13 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bot
 /* MATCH ROW */
 .match-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
 .match-row:last-child{border-bottom:none}
+.match-stats{display:none;padding:6px 0 8px;border-bottom:1px solid var(--border)}
+.match-stats.open{display:block}
+.stat-bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px}
+.stat-bar-bg{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:3px;background:var(--accent)}
+.stat-lbl{width:12px;font-weight:700;color:var(--text2)}
+.stat-count{width:60px;color:var(--text3);text-align:right}
 .match-name{font-size:13px;color:var(--text)}
 .radio-group{display:flex;gap:4px}
 .radio-btn{width:34px;height:29px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;background:transparent;color:var(--text3);transition:.15s;font-family:'Inter',sans-serif}
@@ -462,14 +469,26 @@ function buildFaseGrupos(uid,isAdmin){
         if(wrong) return 'radio-btn sel wrong';
         return 'radio-btn sel';
       };
-      h+=`<div class="match-row">
-        <span class="match-name">${loc} — ${vis}</span>
+      // Contar votos de todos los participantes
+      const votos={1:0,X:0,2:0};
+      Object.values(S.participants).forEach(pp=>{const vv=pp.quiniela?.['m'+idx];if(vv)votos[vv]++;});
+      const total=votos[1]+votos.X+votos[2]||1;
+      const pct=n=>Math.round(n/total*100);
+      h+=`<div class="match-row" onclick="toggleStats('ms${idx}')" style="cursor:pointer">
+        <span class="match-name">${loc} — ${vis} <span style="font-size:10px;color:var(--text3)">▾</span></span>
         <div class="radio-group" style="align-items:center;gap:4px">
           ${wrong?`<span style="font-size:11px;font-weight:700;color:#86efac;background:rgba(134,239,172,.12);border:1px solid rgba(134,239,172,.3);border-radius:5px;padding:2px 7px">${rv}</span>`:''}
-          <button class="${cls('1')}" onclick="${click('1')}"  data-mi="${idx}" data-v="1">1</button>
-          <button class="${cls('X')}" onclick="${click('X')}"  data-mi="${idx}" data-v="X">X</button>
-          <button class="${cls('2')}" onclick="${click('2')}"  data-mi="${idx}" data-v="2">2</button>
+          <button class="${cls('1')}" onclick="event.stopPropagation();${click('1')}"  data-mi="${idx}" data-v="1">1</button>
+          <button class="${cls('X')}" onclick="event.stopPropagation();${click('X')}"  data-mi="${idx}" data-v="X">X</button>
+          <button class="${cls('2')}" onclick="event.stopPropagation();${click('2')}"  data-mi="${idx}" data-v="2">2</button>
         </div>
+      </div>
+      <div class="match-stats" id="ms${idx}">
+        ${['1','X','2'].map(opt=>`<div class="stat-bar-row">
+          <span class="stat-lbl">${opt}</span>
+          <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${pct(votos[opt])}%"></div></div>
+          <span class="stat-count">${votos[opt]} (${pct(votos[opt])}%)</span>
+        </div>`).join('')}
       </div>`;
     });
     // Standings
@@ -480,6 +499,8 @@ function buildFaseGrupos(uid,isAdmin){
   if(isAdmin) h+=`<button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="saveR()">💾 Guardar resultados</button><div id="rsm"></div>`;
   return h;
 }
+
+function toggleStats(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
 
 function setQ(i,v){
   S.participants[S.user].quiniela['m'+i]=v;
