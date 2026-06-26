@@ -418,6 +418,7 @@ function checkReg(){
 
 // ── QUINIELA ──
 let qtab='fase1';
+let rankTab='rank';
 function renderQ(){
   const p=S.participants[S.user];
   const lk=isLocked();
@@ -563,11 +564,10 @@ function buildBracket(uid,isAdmin){
     const rows=isAdmin?calcGrupoAdmin(g):calcGrupo(uid,g);
     h+=`<div style="background:var(--surface2);border-radius:7px;padding:6px 8px">
     <div style="font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--text3);margin-bottom:4px">GR. ${g}</div>
-    ${rows.map((r,i)=>`<div style="font-size:11px;display:flex;gap:2px;padding:1px 0;align-items:center;color:${i<2?'var(--text)':'var(--text3)'}">
+    ${rows.map((r,i)=>`<div style="font-size:11px;display:flex;gap:4px;padding:1px 0;color:${i<2?'var(--text)':'var(--text3)'}">
       <span style="width:14px;font-weight:700">${i+1}º</span>
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.eq}</span>
-      <span style="color:var(--accent);font-weight:600;margin-right:2px">${r.pts}</span>
-      ${isAdmin?`<button onclick="moveGroupTeam('${g}',${i},-1)" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:0 1px;font-size:10px;line-height:1" title="Subir">▲</button><button onclick="moveGroupTeam('${g}',${i},1)" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:0 1px;font-size:10px;line-height:1" title="Bajar">▼</button>`:''}
+      <span style="color:var(--accent);font-weight:600">${r.pts}</span>
     </div>`).join('')}
     </div>`;
   });
@@ -719,9 +719,6 @@ function setCampeon(v){S.participants[S.user].f8=v;renderQ();}
 
 // ── Admin bracket actions ──
 function getAdminPos(pos,grupo){
-  if(S.results.groupOrder?.[grupo]){
-    return S.results.groupOrder[grupo][pos-1]||'';
-  }
   const r=S.results;
   const teams=GRUPOS[grupo];
   const pts={};teams.forEach(t=>pts[t]=0);
@@ -747,12 +744,7 @@ function calcGrupoAdmin(grupo){
     else if(v==='2') pts[m.visitante]+=3;
     else{pj[m.local]--;pj[m.visitante]--;}
   });
-  const sorted=teams.map(eq=>({eq,pts:pts[eq],pj:pj[eq]})).sort((a,b)=>b.pts-a.pts);
-  if(r.groupOrder?.[grupo]){
-    const order=r.groupOrder[grupo];
-    return order.map(eq=>sorted.find(s=>s.eq===eq)||{eq,pts:pts[eq]||0,pj:pj[eq]||0});
-  }
-  return sorted;
+  return teams.map(eq=>({eq,pts:pts[eq],pj:pj[eq]})).sort((a,b)=>b.pts-a.pts);
 }
 function getAdminSlot(s,bracket){
   const[t,v]=s.split(':');
@@ -770,19 +762,6 @@ function setAdminQ(i,v){
   const el=document.getElementById('st_adm_'+g);
   if(el) el.innerHTML=standingsHTML(calcGrupoAdmin(g));
 }
-function moveGroupTeam(grupo,idx,dir){
-  if(!S.results.groupOrder) S.results.groupOrder={};
-  if(!S.results.groupOrder[grupo]){
-    S.results.groupOrder[grupo]=calcGrupoAdmin(grupo).map(r=>r.eq);
-  }
-  const order=S.results.groupOrder[grupo];
-  const newIdx=idx+dir;
-  if(newIdx<0||newIdx>=order.length) return;
-  [order[idx],order[newIdx]]=[order[newIdx],order[idx]];
-  syncAdminFases();
-  renderAdminRes();
-}
-
 function setAdminTercero(bkey,val){
   if(!S.results.bracket) S.results.bracket={};
   S.results.bracket[bkey]=val;
@@ -887,7 +866,12 @@ function renderRank(){
   let h=`<div class="nav">
     <button class="btn btn-sm btn-ghost" onclick="go('home')">← Volver</button>
     <span class="nav-title">Clasificación</span>
-    <span class="count-pill">${rank.length} participantes</span></div>`;
+    <span class="count-pill">${rank.length} participantes</span></div>
+  <div class="sticky-tabs"><div class="tab-bar">
+    <button class="tab${rankTab==='rank'?' active':''}" onclick="setRankTab('rank')">🏆 Clasificación</button>
+    <button class="tab${rankTab==='pron'?' active':''}" onclick="setRankTab('pron')">📊 Pronósticos</button>
+  </div></div>`;
+  if(rankTab==='pron'){app.innerHTML=h+renderPronosticos();return;}
   // Prize pool card
   const pagados=Object.keys(S.payments||{}).length;
   if(pot>0){
@@ -926,6 +910,59 @@ function renderRank(){
     <span class="rank-pts">${p.pts}</span></div>`;
   });
   h+='</div>';app.innerHTML=h;
+}
+
+function setRankTab(t){rankTab=t;renderRank();}
+
+function renderPronosticos(){
+  const parts=Object.values(S.participants);
+  const n=parts.length||1;
+  const rondas=[
+    {key:'f4',label:'16avos',pts:10},
+    {key:'f5',label:'Octavos',pts:15},
+    {key:'f6',label:'Cuartos',pts:20},
+    {key:'f7',label:'Semis',pts:30},
+    {key:'f8',label:'Final/Campeón',pts:45},
+  ];
+  // Contar por equipo y ronda
+  const counts={};
+  TODOS.forEach(eq=>{counts[eq]={f4:0,f5:0,f6:0,f7:0,f8:0};});
+  parts.forEach(p=>{
+    ['f4','f5','f6','f7'].forEach(k=>{
+      (p[k]||[]).forEach(eq=>{if(counts[eq])counts[eq][k]++;});
+    });
+    if(p.f8&&counts[p.f8]) counts[p.f8].f8++;
+  });
+  // Ordenar equipos por mayor % en rondas avanzadas
+  const equipos=TODOS.slice().sort((a,b)=>{
+    const scoreA=counts[a].f4+counts[a].f5*2+counts[a].f6*3+counts[a].f7*4+counts[a].f8*5;
+    const scoreB=counts[b].f4+counts[b].f5*2+counts[b].f6*3+counts[b].f7*4+counts[b].f8*5;
+    return scoreB-scoreA;
+  });
+  let h='<div style="margin-top:4px">';
+  equipos.forEach(eq=>{
+    const c=counts[eq];
+    const maxPct=Math.max(c.f4,c.f5,c.f6,c.f7,c.f8);
+    if(maxPct===0) return; // ocultar equipos sin ningún voto
+    h+=`<div class="card" style="padding:12px 16px;margin-bottom:8px">
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">${eq}</div>
+      ${rondas.map(r=>{
+        const cnt=c[r.key];
+        const pct=Math.round(cnt/n*100);
+        if(cnt===0) return '';
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px">
+          <span style="width:80px;color:var(--text2);flex-shrink:0">${r.label}</span>
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px"></div>
+          </div>
+          <span style="width:36px;text-align:right;color:var(--text2);font-weight:600">${pct}%</span>
+          <span style="width:24px;text-align:right;color:var(--text3)">${cnt}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  });
+  h+='</div>';
+  return h;
 }
 
 // ── ADMIN ──
