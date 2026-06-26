@@ -914,6 +914,21 @@ function renderRank(){
 
 function setRankTab(t){rankTab=t;renderRank();}
 
+const FLAGS={
+  'MEXICO':'🇲🇽','SUDAFRICA':'🇿🇦','COREA DEL SUR':'🇰🇷','REP. CHECA':'🇨🇿',
+  'CANADA':'🇨🇦','BOSNIA':'🇧🇦','QATAR':'🇶🇦','SUIZA':'🇨🇭',
+  'BRASIL':'🇧🇷','MARRUECOS':'🇲🇦','HAITI':'🇭🇹','ESCOCIA':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'ESTADOS UNIDOS':'🇺🇸','PARAGUAY':'🇵🇾','AUSTRALIA':'🇦🇺','TURQUIA':'🇹🇷',
+  'ALEMANIA':'🇩🇪','CURAZAO':'🇨🇼','COSTA DE MARFIL':'🇨🇮','ECUADOR':'🇪🇨',
+  'PAISES BAJOS':'🇳🇱','JAPON':'🇯🇵','SUECIA':'🇸🇪','TUNEZ':'🇹🇳',
+  'BELGICA':'🇧🇪','EGIPTO':'🇪🇬','IRAN':'🇮🇷','NUEVA ZELANDA':'🇳🇿',
+  'ESPAÑA':'🇪🇸','CABO VERDE':'🇨🇻','ARABIA SAUDI':'🇸🇦','URUGUAY':'🇺🇾',
+  'FRANCIA':'🇫🇷','SENEGAL':'🇸🇳','IRAQ':'🇮🇶','NORUEGA':'🇳🇴',
+  'ARGENTINA':'🇦🇷','ARGELIA':'🇩🇿','AUSTRIA':'🇦🇹','JORDANIA':'🇯🇴',
+  'PORTUGAL':'🇵🇹','R.D.CONGO':'🇨🇩','UZBEKISTAN':'🇺🇿','COLOMBIA':'🇨🇴',
+  'INGLATERRA':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','CROACIA':'🇭🇷','GHANA':'🇬🇭','PANAMA':'🇵🇦',
+};
+
 function renderPronosticos(){
   const parts=Object.values(S.participants);
   const n=parts.length||1;
@@ -945,7 +960,7 @@ function renderPronosticos(){
     const maxPct=Math.max(c.f4,c.f5,c.f6,c.f7,c.f8);
     if(maxPct===0) return; // ocultar equipos sin ningún voto
     h+=`<div class="card" style="padding:12px 16px;margin-bottom:8px">
-      <div style="font-weight:600;font-size:14px;margin-bottom:8px">${eq}</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">${FLAGS[eq]||'🏳️'} ${eq}</div>
       ${rondas.map(r=>{
         const cnt=c[r.key];
         const pct=Math.round(cnt/n*100);
