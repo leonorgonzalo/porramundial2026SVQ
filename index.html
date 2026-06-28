@@ -305,7 +305,7 @@ function calcPts(uid){
   // Cuadro + pichichi — solo si fase de grupos completa en resultados reales (o porra abierta)
   const gruposCompletos=Object.keys(r.quiniela||{}).length>=72;
   if(!isLocked()||gruposCompletos){
-    [{k:'f3',v:5},{k:'f4',v:10},{k:'f5',v:15},{k:'f6',v:20},{k:'f7',v:30}].forEach(({k,v})=>{
+    [{k:'f3',v:5},{k:'f4',v:5},{k:'f5',v:10},{k:'f6',v:15},{k:'f7',v:20}].forEach(({k,v})=>{
       (p[k]||[]).forEach(eq=>{if(eq&&(r[k]||[]).includes(eq))pts+=v;});
     });
     if(p.f8&&r.f8&&p.f8===r.f8) pts+=45;
@@ -318,33 +318,6 @@ function calcPts(uid){
   // Bonus manual del admin
   pts+=parseInt(S.bonus?.[uid]||0);
   return pts;
-}
-function calcPtsDetalle(uid){
-  const p=S.participants[uid],r=S.results;
-  if(!p) return {};
-  syncFases(uid);
-  const d={grupos:0,españa:0,f3:0,f4:0,f5:0,f6:0,f7:0,f8:0,pichi:0,bonus:0};
-  PARTIDOS.forEach((_,i)=>{
-    if(p.quiniela?.['m'+i]&&r.quiniela?.['m'+i]&&p.quiniela['m'+i]===r.quiniela['m'+i]) d.grupos+=2;
-  });
-  ['esp_cv','esp_as','esp_ur'].forEach(k=>{
-    if(p.spain?.[k]&&r.spain?.[k]&&p.spain[k]===r.spain[k]) d.españa+=10;
-  });
-  const gruposCompletos=Object.keys(r.quiniela||{}).length>=72;
-  if(!isLocked()||gruposCompletos){
-    [{k:'f3',v:5},{k:'f4',v:10},{k:'f5',v:15},{k:'f6',v:20},{k:'f7',v:30}].forEach(({k,v})=>{
-      (p[k]||[]).forEach(eq=>{if(eq&&(r[k]||[]).includes(eq))d[k]+=v;});
-    });
-    if(p.f8&&r.f8&&p.f8===r.f8) d.f8+=45;
-    if(p.pich_esp&&r.pich_esp&&p.pich_esp.trim().toLowerCase()===r.pich_esp.trim().toLowerCase()) d.pichi+=15;
-    if(p.pich_mun&&r.pich_mun){
-      const opts=(p.pich_mun||'').split(',').map(x=>x.trim().toLowerCase());
-      if(opts.includes(r.pich_mun.trim().toLowerCase())) d.pichi+=15;
-    }
-  }
-  d.bonus=parseInt(S.bonus?.[uid]||0);
-  d.total=d.grupos+d.españa+d.f3+d.f4+d.f5+d.f6+d.f7+d.f8+d.pichi+d.bonus;
-  return d;
 }
 function getRank(){
   return Object.keys(S.participants)
@@ -982,10 +955,10 @@ function renderPronosticos(){
   const parts=Object.values(S.participants);
   const n=parts.length||1;
   const rondas=[
-    {key:'f4',label:'16avos',pts:10},
-    {key:'f5',label:'Octavos',pts:15},
-    {key:'f6',label:'Cuartos',pts:20},
-    {key:'f7',label:'Semis',pts:30},
+    {key:'f4',label:'16avos',pts:5},
+    {key:'f5',label:'Octavos',pts:10},
+    {key:'f6',label:'Cuartos',pts:15},
+    {key:'f7',label:'Semis',pts:20},
     {key:'f8',label:'Final/Campeón',pts:45},
   ];
   // Contar por equipo y ronda
@@ -1105,34 +1078,12 @@ function renderAdminVer(){
   RO=true;
   if(qtab==='save') qtab='fase1';
   const tabs=[{id:'fase1',l:'Fase de grupos'},{id:'fase2',l:'España'},{id:'bracket',l:'Cuadro'},{id:'pichi',l:'Pichichi'}];
-  const d=calcPtsDetalle(viewUid);
-  const desglose=[
-    ['Fase de grupos',d.grupos,'2pts/partido'],
-    ['Partidos España',d.españa,'10pts c/u'],
-    ['16avos',d.f4,'10pts/equipo'],
-    ['Octavos',d.f5,'15pts/equipo'],
-    ['Cuartos',d.f6,'20pts/equipo'],
-    ['Semis',d.f7,'30pts/equipo'],
-    ['Campeón',d.f8,'45pts'],
-    ['Pichichi',d.pichi,'15pts'],
-    ...(d.bonus!==0?[['Bonus manual',d.bonus,'']]:[]),
-  ].filter(([,v])=>v!==0);
   let h=`<div class="nav">
     <button class="btn btn-sm btn-ghost" onclick="closeVer()">← Admin</button>
     <span class="nav-title">${p.nombre}</span>
     <span class="admin-badge" style="background:rgba(99,102,241,.15);color:#a5b4fc">SOLO LECTURA</span></div>
-  <div class="card" style="margin-bottom:12px;padding:10px 14px;font-size:13px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="color:var(--text2)">${p.nombre} · ${viewUid}</span>
-      <b style="color:var(--accent);font-size:18px;font-family:'Bebas Neue',sans-serif">${d.total} pts</b>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:4px">
-      ${desglose.map(([l,v,sub])=>`<div style="background:var(--surface2);border-radius:6px;padding:5px 8px">
-        <div style="font-size:10px;color:var(--text3)">${l}</div>
-        <div style="font-size:16px;font-weight:700;color:var(--accent);font-family:'Bebas Neue',sans-serif">${v} pts</div>
-        ${sub?`<div style="font-size:10px;color:var(--text3)">${sub}</div>`:''}
-      </div>`).join('')}
-    </div>
+  <div class="card" style="margin-bottom:12px;padding:10px 14px;font-size:13px;color:var(--text2)">
+    Quiniela de <b style="color:var(--text)">${p.nombre}</b> · ${viewUid} · <b style="color:var(--accent)">${calcPts(viewUid)} pts</b>
   </div>
   <div class="sticky-tabs"><div class="tab-bar">
   ${tabs.map(t=>`<button class="tab${qtab===t.id?' active':''}" onclick="setQt('${t.id}')">${t.l}</button>`).join('')}
