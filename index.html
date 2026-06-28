@@ -281,10 +281,21 @@ function syncFases(uid){
   GRUPOS_ORDER.forEach(g=>{f3.push(getPos(uid,1,g));f3.push(getPos(uid,2,g));});
   TERCEROS_SLOTS.forEach(ts=>{const v=br['T:'+ts.key];if(v)f3.push(v);});
   p.f3=[...new Set(f3.filter(Boolean))];
-  p.f4=MATCH16.map(m=>br['w_'+m.id]||'').filter(Boolean);
-  p.f5=OCT8.map(m=>br['w_'+m.id]||'').filter(Boolean);
-  p.f6=CUA4.map(m=>br['w_'+m.id]||'').filter(Boolean);
-  p.f7=SEM2.map(m=>br['w_'+m.id]||'').filter(Boolean);
+  // f4 = equipos que el participante tiene en 16avos (los slots que ha elegido)
+  const f4slots=[];
+  MATCH16.forEach(m=>{
+    const a=slotTeam(uid,m.a);
+    const b=slotTeam(uid,m.b);
+    if(a)f4slots.push(a);
+    if(b)f4slots.push(b);
+  });
+  p.f4=[...new Set(f4slots.filter(Boolean))];
+  // f5 = ganadores de 16avos según el participante
+  p.f5=MATCH16.map(m=>br['w_'+m.id]||'').filter(Boolean);
+  // f6 = ganadores de octavos
+  p.f6=OCT8.map(m=>br['w_'+m.id]||'').filter(Boolean);
+  // f7 = ganadores de cuartos
+  p.f7=CUA4.map(m=>br['w_'+m.id]||'').filter(Boolean);
   p.f8=br['w_f1']||p.f8||'';
 }
 
@@ -604,7 +615,7 @@ function buildBracket(uid,isAdmin){
     const fnA=isAdmin?`setAdminWinner('${m.id}','${teamA}','${teamB}')`:`setWinner('${m.id}','${teamA}','${teamB}')`;
     const labelA=slotLabel(m.a),labelB=slotLabel(m.b);
     const isEsp=teamA==='ESPAÑA'||teamB==='ESPAÑA';
-    const rf4=MATCH16.map(m=>S.results?.bracket?.['w_'+m.id]||'').filter(Boolean);
+    const rf4=S.results?.f4||[];
     const corrA=showGreen&&winner===teamA&&!!teamA&&rf4.includes(teamA);
     const corrB=showGreen&&winner===teamB&&!!teamB&&rf4.includes(teamB);
     h+=`<div class="bm${isEsp?' esp':''}">
@@ -662,13 +673,9 @@ function buildBracket(uid,isAdmin){
 function buildFixedRound(titulo,ronda,matches,br,isAdmin,uid,prefix,srcPrefix,pts){
   const ro=!isAdmin&&RO;
   const showGreen=!isAdmin&&RO&&isLocked();
-  const rlistMap={
-    oct:OCT8.map(m=>S.results?.bracket?.['w_'+m.id]||'').filter(Boolean),
-    cua:CUA4.map(m=>S.results?.bracket?.['w_'+m.id]||'').filter(Boolean),
-    sem:SEM2.map(m=>S.results?.bracket?.['w_'+m.id]||'').filter(Boolean),
-  };
+  const rlistMap={oct:S.results?.f5||[],cua:S.results?.f6||[],sem:S.results?.f7||[]};
   const rlist=rlistMap[ronda]||[];
-  const champ=S.results?.bracket?.['w_f1']||S.results?.f8||'';
+  const champ=S.results?.f8||'';
   let h=`<div class="card" style="padding:12px 16px"><h3 style="margin-bottom:4px">${titulo} — <span style="color:var(--text2);font-weight:400;font-size:13px">${pts} pts ${titulo==='Final'?'por acertar el campeón':'por equipo que avanza'}</span></h3>
   <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Pulsa el ganador de cada partido:</p>`;
   matches.forEach(m=>{
@@ -821,10 +828,22 @@ function syncAdminFases(){
   GRUPOS_ORDER.forEach(g=>{f3.push(getAdminPos(1,g));f3.push(getAdminPos(2,g));});
   TERCEROS_SLOTS.forEach(ts=>{const v=br['T:'+ts.key];if(v)f3.push(v);});
   r.f3=[...new Set(f3.filter(Boolean))];
-  r.f4=MATCH16.map(m=>br['w_'+m.id]||'').filter(Boolean);
-  r.f5=OCT8.map(m=>br['w_'+m.id]||'').filter(Boolean);
-  r.f6=CUA4.map(m=>br['w_'+m.id]||'').filter(Boolean);
-  r.f7=SEM2.map(m=>br['w_'+m.id]||'').filter(Boolean);
+  // f4 = equipos en 16avos (1º,2º de grupo + terceros elegidos)
+  const f4slots=[];
+  MATCH16.forEach(m=>{
+    const a=getAdminSlot(m.a,br);
+    const b=getAdminSlot(m.b,br);
+    if(a)f4slots.push(a);
+    if(b)f4slots.push(b);
+  });
+  r.f4=[...new Set(f4slots.filter(Boolean))];
+  // f5 = ganadores de 16avos (pasan a octavos)
+  r.f5=MATCH16.map(m=>br['w_'+m.id]||'').filter(Boolean);
+  // f6 = ganadores de octavos (pasan a cuartos)
+  r.f6=OCT8.map(m=>br['w_'+m.id]||'').filter(Boolean);
+  // f7 = ganadores de cuartos (pasan a semis)
+  r.f7=CUA4.map(m=>br['w_'+m.id]||'').filter(Boolean);
+  // f8 = ganador de semis / finalistas / campeon
   r.f8=br['w_f1']||r.f8||'';
 }
 
