@@ -281,9 +281,10 @@ function syncFases(uid){
   GRUPOS_ORDER.forEach(g=>{f3.push(getPos(uid,1,g));f3.push(getPos(uid,2,g));});
   TERCEROS_SLOTS.forEach(ts=>{const v=br['T:'+ts.key];if(v)f3.push(v);});
   p.f3=[...new Set(f3.filter(Boolean))];
-  const f4slots=[];
-  MATCH16.forEach(m=>{const a=slotTeam(uid,m.a);const b=slotTeam(uid,m.b);if(a)f4slots.push(a);if(b)f4slots.push(b);});
-  p.f4=[...new Set(f4slots.filter(Boolean))];
+  const pf4arr=[];
+  GRUPOS_ORDER.forEach(g=>{const g1=getPos(uid,1,g);const g2=getPos(uid,2,g);if(g1)pf4arr.push(g1);if(g2)pf4arr.push(g2);});
+  TERCEROS_SLOTS.forEach(ts=>{const v=br['T:'+ts.key];if(v)pf4arr.push(v);});
+  p.f4=pf4arr;
   p.f5=MATCH16.map(m=>br['w_'+m.id]||'').filter(Boolean);
   p.f6=OCT8.map(m=>br['w_'+m.id]||'').filter(Boolean);
   p.f7=CUA4.map(m=>br['w_'+m.id]||'').filter(Boolean);
@@ -633,9 +634,7 @@ function buildBracket(uid,isAdmin){
     const fnA=isAdmin?`setAdminWinner('${m.id}','${teamA}','${teamB}')`:`setWinner('${m.id}','${teamA}','${teamB}')`;
     const labelA=slotLabel(m.a),labelB=slotLabel(m.b);
     const isEsp=teamA==='ESPAÑA'||teamB==='ESPAÑA';
-    const rf4slots=[];
-    MATCH16.forEach(m=>{const a=getAdminSlot(m.a,S.results?.bracket||{});const b=getAdminSlot(m.b,S.results?.bracket||{});if(a)rf4slots.push(a);if(b)rf4slots.push(b);});
-    const rf4=[...new Set(rf4slots.filter(Boolean))];
+    const rf4=S.results?.f4||[];
     const corrA=showGreen&&!!teamA&&rf4.includes(teamA);
     const corrB=showGreen&&!!teamB&&rf4.includes(teamB);
     h+=`<div class="bm${isEsp?' esp':''}">
@@ -694,9 +693,9 @@ function buildFixedRound(titulo,ronda,matches,br,isAdmin,uid,prefix,srcPrefix,pt
   const ro=!isAdmin&&RO;
   const showGreen=!isAdmin&&RO&&isLocked();
   const rlistMap={
-    oct:MATCH16.map(m=>S.results?.bracket?.['w_'+m.id]||'').filter(Boolean),
-    cua:OCT8.map(m=>S.results?.bracket?.['w_'+m.id]||'').filter(Boolean),
-    sem:CUA4.map(m=>S.results?.bracket?.['w_'+m.id]||'').filter(Boolean),
+    oct:S.results?.f5||[],
+    cua:S.results?.f6||[],
+    sem:S.results?.f7||[],
   };
   const rlist=rlistMap[ronda]||[];
   const champ=S.results?.bracket?.['w_f1']||S.results?.f8||'';
@@ -852,9 +851,10 @@ function syncAdminFases(){
   GRUPOS_ORDER.forEach(g=>{f3.push(getAdminPos(1,g));f3.push(getAdminPos(2,g));});
   TERCEROS_SLOTS.forEach(ts=>{const v=br['T:'+ts.key];if(v)f3.push(v);});
   r.f3=[...new Set(f3.filter(Boolean))];
-  const f4slots=[];
-  MATCH16.forEach(m=>{const a=getAdminSlot(m.a,br);const b=getAdminSlot(m.b,br);if(a)f4slots.push(a);if(b)f4slots.push(b);});
-  r.f4=[...new Set(f4slots.filter(Boolean))];
+  const rf4set=new Set();
+  GRUPOS_ORDER.forEach(g=>{const g1=getAdminPos(1,g);const g2=getAdminPos(2,g);if(g1)rf4set.add(g1);if(g2)rf4set.add(g2);});
+  TERCEROS_SLOTS.forEach(ts=>{const v=br['T:'+ts.key];if(v)rf4set.add(v);});
+  r.f4=[...rf4set];
   r.f5=MATCH16.map(m=>br['w_'+m.id]||'').filter(Boolean);
   r.f6=OCT8.map(m=>br['w_'+m.id]||'').filter(Boolean);
   r.f7=CUA4.map(m=>br['w_'+m.id]||'').filter(Boolean);
