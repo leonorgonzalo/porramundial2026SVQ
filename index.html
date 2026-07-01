@@ -462,16 +462,17 @@ function renderQ(){
   if(lk) h+=`<div class="lock-banner">🔒 Las quinielas están <b>bloqueadas</b>. Puedes consultar tu pronóstico, pero ya no se puede modificar. Los aciertos aparecen <b style="color:#4ade80">en verde</b>.</div>`;
   if(lk){
     const d=calcPtsDetalle(S.user);
+    const r=S.results;
     const desglose=[
-      ['Grupos',d.grupos,'2pts'],
-      ['España',d.españa,'10pts'],
-      ['16avos',d.f4,'5pts'],
-      ['Octavos',d.f5,'10pts'],
-      ['Cuartos',d.f6,'15pts'],
-      ['Semis',d.f7,'20pts'],
-      ['Campeón',d.f8,'45pts'],
-      ['Pichichi',d.pichi,'15pts'],
-      ...(d.bonus!==0?[['Bonus',d.bonus,'']]:[]),
+      ['Grupos',d.grupos,'2pts',Object.keys(r.quiniela||{}).length+'/72'],
+      ['España',d.españa,'10pts',''],
+      ['16avos',d.f4,'5pts',(r.f4||[]).length+'/32'],
+      ['Octavos',d.f5,'10pts',(r.f5||[]).length+'/16'],
+      ['Cuartos',d.f6,'15pts',(r.f6||[]).length+'/8'],
+      ['Semis',d.f7,'20pts',(r.f7||[]).length+'/4'],
+      ['Campeón',d.f8,'45pts',r.f8?'2/2':'0/2'],
+      ['Pichichi',d.pichi,'15pts',''],
+      ...(d.bonus!==0?[['Bonus',d.bonus,'','']]:[]),
     ].filter(([,v])=>v!==0);
     h+=`<div class="card" style="padding:10px 14px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -479,8 +480,8 @@ function renderQ(){
         <b style="color:var(--accent);font-size:20px;font-family:'Bebas Neue',sans-serif">${d.total} pts</b>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:4px">
-        ${desglose.map(([l,v,sub])=>`<div style="background:var(--surface2);border-radius:6px;padding:5px 8px">
-          <div style="font-size:10px;color:var(--text3)">${l}</div>
+        ${desglose.map(([l,v,sub,prog])=>`<div style="background:var(--surface2);border-radius:6px;padding:5px 8px">
+          <div style="font-size:10px;color:var(--text3)">${l}${prog?` <span style="opacity:.6">${prog}</span>`:''}</div>
           <div style="font-size:15px;font-weight:700;color:var(--accent);font-family:'Bebas Neue',sans-serif">${v} pts</div>
           <div style="font-size:10px;color:var(--text3)">${sub}</div>
         </div>`).join('')}
@@ -1143,16 +1144,17 @@ function renderAdminVer(){
   if(qtab==='save') qtab='fase1';
   const tabs=[{id:'fase1',l:'Fase de grupos'},{id:'fase2',l:'España'},{id:'bracket',l:'Cuadro'},{id:'pichi',l:'Pichichi'}];
   const d=calcPtsDetalle(viewUid);
+  const ra=S.results;
   const desglose=[
-    ['Fase de grupos',d.grupos,'2pts/partido'],
-    ['Partidos España',d.españa,'10pts c/u'],
-    ['16avos',d.f4,'5pts/equipo'],
-    ['Octavos',d.f5,'10pts/equipo'],
-    ['Cuartos',d.f6,'15pts/equipo'],
-    ['Semis',d.f7,'20pts/equipo'],
-    ['Campeón',d.f8,'45pts'],
-    ['Pichichi',d.pichi,'15pts'],
-    ...(d.bonus!==0?[['Bonus manual',d.bonus,'']]:[]),
+    ['Fase de grupos',d.grupos,'2pts/partido',Object.keys(ra.quiniela||{}).length+'/72'],
+    ['Partidos España',d.españa,'10pts c/u',''],
+    ['16avos',d.f4,'5pts/equipo',(ra.f4||[]).length+'/32'],
+    ['Octavos',d.f5,'10pts/equipo',(ra.f5||[]).length+'/16'],
+    ['Cuartos',d.f6,'15pts/equipo',(ra.f6||[]).length+'/8'],
+    ['Semis',d.f7,'20pts/equipo',(ra.f7||[]).length+'/4'],
+    ['Campeón',d.f8,'45pts',ra.f8?'2/2':'0/2'],
+    ['Pichichi',d.pichi,'15pts',''],
+    ...(d.bonus!==0?[['Bonus manual',d.bonus,'','']]:[]),
   ].filter(([,v])=>v!==0);
   let h=`<div class="nav">
     <button class="btn btn-sm btn-ghost" onclick="closeVer()">← Admin</button>
@@ -1164,8 +1166,8 @@ function renderAdminVer(){
       <b style="color:var(--accent);font-size:18px;font-family:'Bebas Neue',sans-serif">${d.total} pts</b>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:4px">
-      ${desglose.map(([l,v,sub])=>`<div style="background:var(--surface2);border-radius:6px;padding:5px 8px">
-        <div style="font-size:10px;color:var(--text3)">${l}</div>
+      ${desglose.map(([l,v,sub,prog])=>`<div style="background:var(--surface2);border-radius:6px;padding:5px 8px">
+        <div style="font-size:10px;color:var(--text3)">${l}${prog?` <span style="opacity:.6">${prog}</span>`:''}</div>
         <div style="font-size:16px;font-weight:700;color:var(--accent);font-family:'Bebas Neue',sans-serif">${v} pts</div>
         ${sub?`<div style="font-size:10px;color:var(--text3)">${sub}</div>`:''}
       </div>`).join('')}
