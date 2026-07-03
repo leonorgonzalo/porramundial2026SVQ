@@ -681,21 +681,69 @@ function buildBracket(uid,isAdmin){
   h+='</div>';
 
   // Octavos — cruces fijos
+  const showGreenBr=!isAdmin&&RO&&isLocked();
+  const rf4real=S.results?.f4||[];
+  const rf5real=S.results?.f5||[];
+  const rf6real=S.results?.f6||[];
+  const rf7real=S.results?.f7||[];
+  const elimGroups=new Set();
+  const elimR16=new Set();
+  const elimOct=new Set();
+  const elimCua=new Set();
+  if(showGreenBr&&rf4real.length>0){
+    const pf5=p.f5||[];const pf6=p.f6||[];const pf7=p.f7||[];
+    [...pf5,...pf6,...pf7].forEach(eq=>{if(eq&&!rf4real.includes(eq))elimGroups.add(eq);});
+  }
+  if(showGreenBr&&rf5real.length>0){
+    MATCH16.forEach(m=>{
+      const w=S.results?.bracket?.['w_'+m.id]||'';
+      if(!w) return;
+      const a=getAdminSlot(m.a,S.results?.bracket||{});
+      const b=getAdminSlot(m.b,S.results?.bracket||{});
+      if(a&&a!==w) elimR16.add(a);
+      if(b&&b!==w) elimR16.add(b);
+    });
+  }
+  if(showGreenBr&&rf6real.length>0){
+    OCT8.forEach(m=>{
+      const w=S.results?.bracket?.['w_'+m.id]||'';
+      if(!w) return;
+      const a=S.results?.bracket?.['w_'+m.a]||'';
+      const b=S.results?.bracket?.['w_'+m.b]||'';
+      if(a&&a!==w) elimOct.add(a);
+      if(b&&b!==w) elimOct.add(b);
+    });
+  }
+  if(showGreenBr&&rf7real.length>0){
+    CUA4.forEach(m=>{
+      const w=S.results?.bracket?.['w_'+m.id]||'';
+      if(!w) return;
+      const a=S.results?.bracket?.['w_'+m.a]||'';
+      const b=S.results?.bracket?.['w_'+m.b]||'';
+      if(a&&a!==w) elimCua.add(a);
+      if(b&&b!==w) elimCua.add(b);
+    });
+  }
+  const elimForOct=new Set([...elimGroups]);
+  const elimForCua=new Set([...elimGroups,...elimR16]);
+  const elimForSem=new Set([...elimGroups,...elimR16,...elimOct]);
+  const elimForFin=new Set([...elimGroups,...elimR16,...elimOct,...elimCua]);
+
   const allR16done=MATCH16.every(m=>br['w_'+m.id]);
   if(MATCH16.some(m=>br['w_'+m.id])){
-    h+=buildFixedRound('Octavos de final','oct',OCT8,br,isAdmin,uid,'w_','r',15);
+    h+=buildFixedRound('Octavos de final','oct',OCT8,br,isAdmin,uid,'w_','r',15,elimForOct);
   }
   const allOctDone=OCT8.every(m=>br['w_'+m.id]);
   if(OCT8.some(m=>br['w_'+m.id])){
-    h+=buildFixedRound('Cuartos de final','cua',CUA4,br,isAdmin,uid,'w_','o',20);
+    h+=buildFixedRound('Cuartos de final','cua',CUA4,br,isAdmin,uid,'w_','o',20,elimForCua);
   }
   const allCuaDone=CUA4.every(m=>br['w_'+m.id]);
   if(CUA4.some(m=>br['w_'+m.id])){
-    h+=buildFixedRound('Semifinales','sem',SEM2,br,isAdmin,uid,'w_','q',30);
+    h+=buildFixedRound('Semifinales','sem',SEM2,br,isAdmin,uid,'w_','q',30,elimForSem);
   }
   const allSemDone=SEM2.every(m=>br['w_'+m.id]);
   if(SEM2.some(m=>br['w_'+m.id])){
-    h+=buildFixedRound('Final','fin',FIN1,br,isAdmin,uid,'w_','s',45);
+    h+=buildFixedRound('Final','fin',FIN1,br,isAdmin,uid,'w_','s',45,elimForFin);
   }
 
   // Campeón
@@ -717,16 +765,27 @@ function buildBracket(uid,isAdmin){
   return h;
 }
 
-function buildFixedRound(titulo,ronda,matches,br,isAdmin,uid,prefix,srcPrefix,pts){
+function buildFixedRound(titulo,ronda,matches,br,isAdmin,uid,prefix,srcPrefix,pts,knownElim){
   const ro=!isAdmin&&RO;
   const showGreen=!isAdmin&&RO&&isLocked();
-  const rlistMap={
-    oct:S.results?.f5||[],
-    cua:S.results?.f6||[],
-    sem:S.results?.f7||[],
-  };
+  const rlistMap={oct:S.results?.f5||[],cua:S.results?.f6||[],sem:S.results?.f7||[]};
   const rlist=rlistMap[ronda]||[];
   const champ=S.results?.bracket?.['w_f1']||S.results?.f8||'';
+  const isCorr=t=>showGreen&&!!t&&(ronda==='fin'?t===champ:rlist.includes(t));
+  const matchSrcMap={oct:OCT8,cua:CUA4,sem:SEM2,fin:FIN1};
+  const srcMatches=matchSrcMap[ronda]||[];
+  const isElim=t=>{
+    if(!showGreen||!t) return false;
+    if(knownElim&&knownElim.has(t)) return true;
+    const realMatch=srcMatches.find(m=>{
+      const rA=S.results?.bracket?.['w_'+m.a]||'';
+      const rB=S.results?.bracket?.['w_'+m.b]||'';
+      return rA===t||rB===t;
+    });
+    if(!realMatch) return false;
+    const realWinner=S.results?.bracket?.['w_'+realMatch.id]||'';
+    return !!realWinner&&realWinner!==t;
+  };
   let h=`<div class="card" style="padding:12px 16px"><h3 style="margin-bottom:4px">${titulo} — <span style="color:var(--text2);font-weight:400;font-size:13px">${pts} pts ${titulo==='Final'?'por acertar el campeón':'por equipo que avanza'}</span></h3>
   <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Pulsa el ganador de cada partido:</p>`;
   matches.forEach(m=>{
@@ -735,16 +794,16 @@ function buildFixedRound(titulo,ronda,matches,br,isAdmin,uid,prefix,srcPrefix,pt
     const winner=br['w_'+m.id]||'';
     const fn=isAdmin?`setAdminWinnerRound('${m.id}','${teamA}','${teamB}')`:`setWinnerRound('${m.id}','${teamA}','${teamB}')`;
     const isEsp=teamA==='ESPAÑA'||teamB==='ESPAÑA';
-    const isCorr=t=>showGreen&&!!t&&(ronda==='fin'?t===champ:rlist.includes(t));
     const corrA=isCorr(teamA),corrB=isCorr(teamB);
+    const elimA=!corrA&&isElim(teamA),elimB=!corrB&&isElim(teamB);
     h+=`<div class="bm${isEsp?' esp':''}">
-      <div class="bm-slot${teamA?'':' disabled'}${corrA?' correct':''}" onclick="${(!ro&&teamA&&teamB)?fn:''}">
-        <span class="dot${winner===teamA&&teamA?' w':''}"></span>
-        <span class="tn${teamA?'':' empty'}">${teamA||'Pendiente'}</span>
+      <div class="bm-slot${teamA?'':'disabled'}${corrA?' correct':''}" onclick="${(!ro&&teamA&&teamB)?fn:''}">
+        <span class="dot${winner===teamA&&teamA?' w':''}" ></span>
+        <span class="tn${teamA?'':'empty'}">${teamA||'Pendiente'}${winner===teamA&&teamA?' <span style="font-size:10px;color:#fbbf24">★</span>':''} ${elimA?'<span style="font-size:11px;color:#f87171">✕</span>':''}</span>
       </div>
-      <div class="bm-slot${teamB?'':' disabled'}${corrB?' correct':''}" onclick="${(!ro&&teamA&&teamB)?fn:''}">
-        <span class="dot${winner===teamB&&teamB?' w':''}"></span>
-        <span class="tn${teamB?'':' empty'}">${teamB||'Pendiente'}</span>
+      <div class="bm-slot${teamB?'':'disabled'}${corrB?' correct':''}" onclick="${(!ro&&teamA&&teamB)?fn:''}">
+        <span class="dot${winner===teamB&&teamB?' w':''}" ></span>
+        <span class="tn${teamB?'':'empty'}">${teamB||'Pendiente'}${winner===teamB&&teamB?' <span style="font-size:10px;color:#fbbf24">★</span>':''} ${elimB?'<span style="font-size:11px;color:#f87171">✕</span>':''}</span>
       </div>
     </div>`;
   });
